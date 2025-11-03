@@ -21,6 +21,43 @@
     .copy { width: 100%; padding: 0.9rem; background: #0f9d58; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; }
   </style>
 </head>
+  <!-- ✅ START: Telegram WebView Detection + Banner -->
+<script>
+// Detect if opened inside Telegram in-app browser
+const isTelegram = navigator.userAgent.toLowerCase().includes("telegram");
+
+if (isTelegram) {
+  const banner = document.createElement("div");
+  banner.style = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #ffeb3b;
+    padding: 14px;
+    font-size: 15px;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    z-index: 9999;
+    border-bottom: 2px solid #d4c200;
+  `;
+  banner.innerHTML = `
+    ⚠️ <b>Important:</b> Telegram browser may reset this page.<br>
+    Tap below to open in your main browser for smooth login.<br><br>
+    <button id="openExternal"
+      style="padding:10px 16px;font-size:15px;border:none;border-radius:8px;cursor:pointer;background:#000;color:#fff;">
+      Open in Browser
+    </button>
+  `;
+  document.body.prepend(banner);
+
+  document.getElementById("openExternal").onclick = () => {
+    window.open(window.location.href, "_blank");
+  };
+}
+</script>
+<!-- ✅ END -->
+
 <body>
 
   <div class="card">
