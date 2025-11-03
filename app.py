@@ -145,4 +145,12 @@ async def delete(phone: str):
     delete_session(phone)
     return RedirectResponse("/admin/sessions")
 
+# AT THE END OF app.py — ADD THIS:
+import uvicorn
+
+if __name__ == "__main__":
+    import os
+    port = int(os.getenv("PORT", 8000))  # Railway sets PORT
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
+
 # === NO check_admin() needed — simplified ===
