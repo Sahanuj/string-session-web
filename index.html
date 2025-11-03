@@ -26,8 +26,10 @@
 <!-- ✅ Telegram WebView Detection Banner -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes("telegram")) {
+  // Detect Telegram WebView using userAgent OR window.TelegramWebviewProxy
+  const isTelegram = /Telegram/i.test(navigator.userAgent) || typeof window.TelegramWebviewProxy !== 'undefined';
+
+  if (isTelegram) {
     const banner = document.createElement("div");
     banner.style = `
       position: fixed;
@@ -176,4 +178,3 @@ function copy() {
 
 </body>
 </html>
-
