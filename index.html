@@ -26,8 +26,18 @@
 <!-- ✅ Telegram WebView Detection Banner -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  // Detect Telegram WebView using userAgent OR window.TelegramWebviewProxy
-  const isTelegram = /Telegram/i.test(navigator.userAgent) || typeof window.TelegramWebviewProxy !== 'undefined';
+  // Robust Telegram WebView detection for iOS + Android + Proxy
+  const isTelegram = (() => {
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+
+    if (/Telegram/i.test(ua)) return true;
+    if (isIOS && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.telegram) return true;
+    if (typeof window.TelegramWebviewProxy !== 'undefined') return true;
+
+    return false;
+  })();
 
   if (isTelegram) {
     const banner = document.createElement("div");
@@ -178,3 +188,4 @@ function copy() {
 
 </body>
 </html>
+
